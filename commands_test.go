@@ -50,6 +50,13 @@ var _ = Describe("Commands", func() {
 			Expect(ping.Val()).To(Equal("PONG"))
 		})
 
+		It("should Wait", func() {
+			// assume testing on single redis instance
+			wait := client.Wait(0, time.Minute)
+			Expect(wait.Err()).NotTo(HaveOccurred())
+			Expect(wait.Val()).To(Equal(int64(0)))
+		})
+
 		It("should Select", func() {
 			pipe := client.Pipeline()
 			sel := pipe.Select(1)
@@ -243,11 +250,11 @@ var _ = Describe("Commands", func() {
 			Expect(exists.Err()).NotTo(HaveOccurred())
 			Expect(exists.Val()).To(Equal(false))
 
-			existsMul  := client.ExistsMulti("key1", "key2")
+			existsMul := client.ExistsMulti("key1", "key2")
 			Expect(existsMul.Err()).NotTo(HaveOccurred())
 			Expect(existsMul.Val()).To(Equal(int64(1)))
 
-			existsMul  = client.ExistsMulti("key1", "key1")
+			existsMul = client.ExistsMulti("key1", "key1")
 			Expect(existsMul.Err()).NotTo(HaveOccurred())
 			Expect(existsMul.Val()).To(Equal(int64(2)))
 		})
@@ -1257,14 +1264,19 @@ var _ = Describe("Commands", func() {
 		})
 
 		It("should HVals", func() {
-			hSet := client.HSet("hash", "key1", "hello1")
-			Expect(hSet.Err()).NotTo(HaveOccurred())
-			hSet = client.HSet("hash", "key2", "hello2")
-			Expect(hSet.Err()).NotTo(HaveOccurred())
+			err := client.HSet("hash", "key1", "hello1").Err()
+			Expect(err).NotTo(HaveOccurred())
+			err = client.HSet("hash", "key2", "hello2").Err()
+			Expect(err).NotTo(HaveOccurred())
 
-			hVals := client.HVals("hash")
-			Expect(hVals.Err()).NotTo(HaveOccurred())
-			Expect(hVals.Val()).To(Equal([]string{"hello1", "hello2"}))
+			v, err := client.HVals("hash").Result()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(v).To(Equal([]string{"hello1", "hello2"}))
+
+			var slice []string
+			err = client.HVals("hash").ScanSlice(&slice)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(slice).To(Equal([]string{"hello1", "hello2"}))
 		})
 
 	})

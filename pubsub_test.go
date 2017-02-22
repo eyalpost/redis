@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"gopkg.in/redis.v5"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"gopkg.in/redis.v5"
 )
 
 var _ = Describe("PubSub", func() {
@@ -347,11 +347,14 @@ var _ = Describe("PubSub", func() {
 			defer GinkgoRecover()
 
 			wg.Done()
+			defer wg.Done()
 
 			_, err := pubsub.ReceiveMessage()
-			Expect(err).To(MatchError("redis: client is closed"))
-
-			wg.Done()
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(SatisfyAny(
+				MatchError("redis: client is closed"),
+				MatchError("use of closed network connection"), // Go 1.4
+			))
 		}()
 
 		wg.Wait()
